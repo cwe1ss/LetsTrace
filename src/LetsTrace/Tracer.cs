@@ -6,6 +6,7 @@ using LetsTrace.Reporters;
 using LetsTrace.Util;
 using OpenTracing;
 using OpenTracing.Propagation;
+using OpenTracing.Util;
 
 namespace LetsTrace
 {
@@ -25,12 +26,12 @@ namespace LetsTrace
         // TODO: support tracer level tags
         // TODO: support trace options
         // TODO: add logger
-        public Tracer(string serviceName, IReporter reporter, string hostIPv4, IScopeManager scopeManager)
+        public Tracer(string serviceName, IReporter reporter, string hostIPv4, IScopeManager scopeManager = null)
         {
             ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
             _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
             HostIPv4 = hostIPv4 ?? throw new ArgumentNullException(nameof(hostIPv4));
-            ScopeManager = scopeManager ?? throw new ArgumentNullException(nameof(scopeManager));
+            ScopeManager = scopeManager ?? new AsyncLocalScopeManager();
 
             // set up default options - TODO: allow these to be overridden via options
             var defaultHeadersConfig = new HeadersConfig(Constants.TraceContextHeaderName, Constants.TraceBaggageHeaderPrefix);

@@ -5,6 +5,7 @@ using LetsTrace.Util;
 using NSubstitute;
 using OpenTracing;
 using OpenTracing.Propagation;
+using OpenTracing.Util;
 using Xunit;
 
 namespace LetsTrace.Tests
@@ -51,12 +52,12 @@ namespace LetsTrace.Tests
         }
 
         [Fact]
-        public void Tracer_Constructor_ShouldThrowWhenScopeManagerIsNull()
+        public void Tracer_Constructor_ShouldUseOpenTracingScopeManagerWhenScopeManagerIsNull()
         {
             var reporter = Substitute.For<IReporter>();
 
-            var ex = Assert.Throws<ArgumentNullException>(() => new Tracer("testingService", reporter, "", null));
-            Assert.Equal("scopeManager", ex.ParamName);
+            var tracer = new Tracer("testingService", reporter, "", null);
+            Assert.True(tracer.ScopeManager is AsyncLocalScopeManager);
         }
 
         [Fact]
