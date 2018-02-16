@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LetsTrace\LetsTrace.csproj" />
+    <ProjectReference Include="..\..\src\OpenTracing\OpenTracing.csproj" />
   </ItemGroup>
 
 </Project>

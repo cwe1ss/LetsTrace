@@ -78,13 +78,13 @@ namespace LetsTrace.Transport.Zipkin.ZipkinJSON
         {
             switch (spanKind)
             {
-                case OpenTracing.Tags.SpanKindClient:
+                case OpenTracing.Tag.Tags.SpanKindClient:
                     return KindEnum.CLIENT;
-                case OpenTracing.Tags.SpanKindConsumer:
+                case OpenTracing.Tag.Tags.SpanKindConsumer:
                     return KindEnum.CONSUMER;
-                case OpenTracing.Tags.SpanKindProducer:
+                case OpenTracing.Tag.Tags.SpanKindProducer:
                     return KindEnum.PRODUCER;
-                case OpenTracing.Tags.SpanKindServer:
+                case OpenTracing.Tag.Tags.SpanKindServer:
                     return KindEnum.SERVER;
                 default:
                     return 0;
@@ -108,8 +108,8 @@ namespace LetsTrace.Transport.Zipkin.ZipkinJSON
                 });
             });
 
-            var tags = span.Tags.Where(t => t.Key != OpenTracing.Tags.SpanKind).ToDictionary(t => t.Key, t => t.Value.StringValue);
-            var spanKind = span.Tags.Where(t => t.Key == OpenTracing.Tags.SpanKind).FirstOrDefault().Value.StringValue;
+            var tags = span.Tags.Where(t => t.Key != OpenTracing.Tag.Tags.SpanKind.Key).ToDictionary(t => t.Key, t => t.Value.StringValue);
+            var spanKind = span.Tags.Where(t => t.Key == OpenTracing.Tag.Tags.SpanKind.Key).FirstOrDefault().Value.StringValue;
 
             var convertedSpan = new Span {
                 TraceId = context.TraceId.ToString(),

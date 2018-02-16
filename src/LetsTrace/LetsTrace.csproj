@@ -7,12 +7,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="OpenTracing" Version="0.10.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Jaeger\Jaeger.Thrift\Jaeger.Thrift.csproj" />
     <ProjectReference Include="..\Thrift\netcore\Thrift\Thrift.csproj" />
+    <ProjectReference Include="..\OpenTracing\OpenTracing.csproj" />
   </ItemGroup>
 
 </Project>

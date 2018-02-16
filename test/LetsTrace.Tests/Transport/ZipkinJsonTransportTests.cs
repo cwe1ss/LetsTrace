@@ -22,7 +22,7 @@ namespace LetsTrace.Tests
                 new LogRecord(DateTimeOffset.Now, new List<Field> { new Field<string> { Key = "field_log_key", Value = "message, yo" } })
             };
             var tags = new Dictionary<string, Field> {
-                { Tags.SpanKind, new Field<string> { Value = Tags.SpanKindServer } },
+                { OpenTracing.Tag.Tags.SpanKind.Key, new Field<string> { Value = OpenTracing.Tag.Tags.SpanKindServer } },
                 { "randomkey", new Field<bool> { Value = false } }
             };
             var operationName = "testing";
