@@ -30,7 +30,6 @@ namespace LetsTrace.Tests
             }
         }
 
-
         [Fact]
         public void Tracer_Constructor_ShouldThrowWhenServiceNameIsNull()
         {
@@ -75,21 +74,6 @@ namespace LetsTrace.Tests
         }
 
         [Fact]
-        public void Tracer_Constructor_ShouldSetupDefaultInjectorsAndExtractors()
-        {
-            var reporter = Substitute.For<IReporter>();
-            var sampler = Substitute.For<ISampler>();
-            var scopeManager = Substitute.For<IScopeManager>();
-            
-            var tracer = new Tracer("testingService", reporter, "192.168.1.1", sampler, scopeManager);
-
-            Assert.Contains(tracer._injectors, i => i.Key == BuiltinFormats.TextMap.ToString());
-            Assert.Contains(tracer._injectors, i => i.Key == BuiltinFormats.HttpHeaders.ToString());
-            Assert.Contains(tracer._extractors, i => i.Key == BuiltinFormats.TextMap.ToString());
-            Assert.Contains(tracer._extractors, i => i.Key == BuiltinFormats.HttpHeaders.ToString());
-        }
-
-        [Fact]
         public void Tracer_BuildSpan_ShouldPassItselfAndOperationNameToSpanBuilder()
         {
             var reporter = Substitute.For<IReporter>();
@@ -103,6 +87,29 @@ namespace LetsTrace.Tests
 
             Assert.Equal(operationName, span.OperationName);
             Assert.Equal(tracer, span.Tracer);
+        }
+
+        [Fact]
+        public void Tracer_BuildSpan_ShouldUsePassedInPropagationRegistry()
+        {
+            var reporter = Substitute.For<IReporter>();
+            var sampler = Substitute.For<ISampler>();
+            var scopeManager = Substitute.For<IScopeManager>();
+            var pReg = Substitute.For<IPropagationRegistry>();
+
+            IFormat<string> format = new Builtin<string>("format");
+            var carrier = "carrier, yo";
+            pReg.Extract(Arg.Is<IFormat<string>>(f => f == format), Arg.Is<string>(c => c == carrier));
+            var spanContext = Substitute.For<ISpanContext>();
+            pReg.Inject(Arg.Is<ISpanContext>(sc => sc == spanContext), Arg.Is<IFormat<string>>(f => f == format), Arg.Is<string>(c => c == carrier));
+
+
+            var tracer = new Tracer("testingService", reporter, "192.168.1.1", sampler, null, pReg);
+            tracer.Extract(format, carrier);
+            tracer.Inject(spanContext, format, carrier);
+
+            pReg.Received(1).Extract(Arg.Any<IFormat<string>>(), Arg.Any<string>());
+            pReg.Received(1).Inject(Arg.Any<ISpanContext>(), Arg.Any<IFormat<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -137,49 +144,6 @@ namespace LetsTrace.Tests
             tracer.ReportSpan(span);
 
             reporter.Received(0).Report(Arg.Any<ILetsTraceSpan>());
-        }
-
-        [Fact]
-        public void Tracer_ExtractAndInject_ShouldUseTheCorrectCodec()
-        {
-            var reporter = Substitute.For<IReporter>();
-            var injector = Substitute.For<IInjector>();
-            var extractor = Substitute.For<IExtractor>();
-            var carrier = "carrier, yo";
-            var spanContext = Substitute.For<ISpanContext>();
-            var sampler = Substitute.For<ISampler>();
-            var scopeManager = Substitute.For<IScopeManager>();
-
-            var format = new Builtin<string>("format");
-
-            extractor.Extract(Arg.Is<string>(c => c == carrier));
-            injector.Inject(Arg.Is<ISpanContext>(sc => sc == spanContext), Arg.Is<string>(c => c == carrier));
-
-            var tracer = new Tracer("testingService", reporter, "192.168.1.1", sampler, scopeManager);
-            tracer.AddCodec(format.ToString(), injector, extractor);
-            tracer.Extract(format, carrier);
-            tracer.Inject(spanContext, format, carrier);
-
-            extractor.Received(1).Extract(Arg.Any<string>());
-            injector.Received(1).Inject(Arg.Any<ISpanContext>(), Arg.Any<string>());
-        }
-
-        [Fact]
-        public void Tracer_ExtractAndInject_ShouldThrowWhenCodecDoesNotExist()
-        {
-            var reporter = Substitute.For<IReporter>();
-            var carrier = "carrier, yo";
-            var spanContext = Substitute.For<ISpanContext>();
-            var format = new Builtin<string>("format");
-            var sampler = Substitute.For<ISampler>();
-            var scopeManager = Substitute.For<IScopeManager>();
-
-            var tracer = new Tracer("testingService", reporter, "192.168.1.1", sampler, scopeManager);
-            var ex = Assert.Throws<Exception>(() => tracer.Extract(format, carrier));
-            Assert.Equal($"{format} is not a supported extraction format", ex.Message);
-
-            ex = Assert.Throws<Exception>(() => tracer.Inject(spanContext, format, carrier));
-            Assert.Equal($"{format} is not a supported injection format", ex.Message);
         }
 
         [Fact]

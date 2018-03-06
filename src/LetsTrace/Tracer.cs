@@ -14,8 +14,7 @@ namespace LetsTrace
     // Tracer is the main object that consumers use to start spans
     public class Tracer : ILetsTraceTracer
     {
-        internal Dictionary<string, IInjector> _injectors { get; private set; } = new Dictionary<string, IInjector>();
-        internal Dictionary<string, IExtractor> _extractors { get; private set; } = new Dictionary<string, IExtractor>();
+        private IPropagationRegistry _propagationRegistry;
         private IReporter _reporter;
         private ISampler _sampler;
 
@@ -26,37 +25,28 @@ namespace LetsTrace
         public string ServiceName { get; }
 
         // TODO: support tracer level tags
-        // TODO: support trace options
+        // TODO: support metrics
         // TODO: add logger
-        public Tracer(string serviceName, IReporter reporter, string hostIPv4, ISampler sampler, IScopeManager scopeManager = null)
+        public Tracer(
+            string serviceName,
+            IReporter reporter,
+            string hostIPv4,
+            ISampler sampler,
+            IScopeManager scopeManager = null,
+            IPropagationRegistry propagationRegistry = null
+        )
         {
             ServiceName = serviceName ?? throw new ArgumentNullException(nameof(serviceName));
             _reporter = reporter ?? throw new ArgumentNullException(nameof(reporter));
             HostIPv4 = hostIPv4 ?? throw new ArgumentNullException(nameof(hostIPv4));
             _sampler = sampler ?? throw new ArgumentNullException(nameof(sampler));
             ScopeManager = scopeManager ?? new AsyncLocalScopeManager();
+            _propagationRegistry = propagationRegistry ?? new PropagationRegistry();
 
             // set up default options - TODO: allow these to be overridden via options
-            var defaultHeadersConfig = new HeadersConfig(Constants.TraceContextHeaderName, Constants.TraceBaggageHeaderPrefix);
-
-            var textPropagator = TextMapPropagator.NewTextMapPropagator(defaultHeadersConfig);
-            AddCodec(BuiltinFormats.TextMap.ToString(), textPropagator, textPropagator);
-
-            var httpHeaderPropagator = TextMapPropagator.NewHTTPHeaderPropagator(defaultHeadersConfig);
-            AddCodec(BuiltinFormats.HttpHeaders.ToString(), httpHeaderPropagator, httpHeaderPropagator);
+            
 
             Clock = new Clock();
-        }
-
-        internal void AddCodec(string format, IInjector injector, IExtractor extractor)
-        {
-            if (!_injectors.ContainsKey(format)) {
-                _injectors.Add(format, injector);
-            }
-
-            if (!_extractors.ContainsKey(format)) {
-                _extractors.Add(format, extractor);
-            }
         }
 
         public ISpanBuilder BuildSpan(string operationName)
@@ -72,22 +62,9 @@ namespace LetsTrace
             }
         }
 
-        public ISpanContext Extract<TCarrier>(IFormat<TCarrier> format, TCarrier carrier)
-        {
-            if (_extractors.ContainsKey(format.ToString())) {
-                return _extractors[format.ToString()].Extract(carrier);
-            }
-            throw new Exception($"{format.ToString()} is not a supported extraction format");
-        }
+        public ISpanContext Extract<TCarrier>(IFormat<TCarrier> format, TCarrier carrier) => _propagationRegistry.Extract(format, carrier);
 
-        public void Inject<TCarrier>(ISpanContext spanContext, IFormat<TCarrier> format, TCarrier carrier)
-        {
-            if (_injectors.ContainsKey(format.ToString())) {
-                _injectors[format.ToString()].Inject(spanContext, carrier);
-                return;
-            }
-            throw new Exception($"{format.ToString()} is not a supported injection format");
-        }
+        public void Inject<TCarrier>(ISpanContext spanContext, IFormat<TCarrier> format, TCarrier carrier) => _propagationRegistry.Inject(spanContext, format, carrier);
 
         // TODO: setup baggage restriction
         public ILetsTraceSpan SetBaggageItem(ILetsTraceSpan span, string key, string value)
